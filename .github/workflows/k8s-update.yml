@@ -1,0 +1,71 @@
+name: Build Image and Update K8s Deployment
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  AWS_REGION: us-east-1
+  IMAGE_NAME: app-repo
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1 — Checkout app-repo
+      - name: Checkout app-repo
+        uses: actions/checkout@v4
+
+      # Step 2 — Configure AWS credentials
+      - name: Set AWS credentials
+        run: |
+          echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
+          echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> $GITHUB_ENV
+          echo "AWS_REGION=${AWS_REGION}" >> $GITHUB_ENV
+
+      # Step 3 — Ensure ECR repository exists
+      - name: Ensure ECR repository exists
+        run: |
+          aws ecr describe-repositories --repository-names ${{ env.IMAGE_NAME }} || \
+          aws ecr create-repository --repository-name ${{ env.IMAGE_NAME }}
+
+      # Step 4 — Login to Amazon ECR
+      - name: Login to Amazon ECR
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+
+      # Step 5 — Build and push Docker image
+      - name: Build and push Docker image
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          ECR_REGISTRY=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+          docker build -t $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }} .
+          docker push $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}
+
+      # Step 6 — Checkout infra-repo
+      - name: Checkout infra-repo
+        uses: actions/checkout@v4
+        with:
+          repository: Yemmy03/infra-repo
+          token: ${{ secrets.INFRA_REPO_ACCESS_DUMMY }}
+          path: infra
+
+      # Step 7 — Update deployment file with new image
+      - name: Update K8s deployment image
+        run: |
+          ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
+          ECR_REGISTRY=$ACCOUNT_ID.dkr.ecr.$AWS_REGION.amazonaws.com
+          sed -i "s|image:.*|image: $ECR_REGISTRY/$IMAGE_NAME:${{ github.sha }}|g" infra/k8s/deployment.yml
+
+      # Step 8 — Commit and push changes
+      - name: Commit and push deployment update
+        run: |
+          cd infra
+          git config user.email "github-actions@github.com"
+          git config user.name "GitHub Actions"
+          git add k8s/deployment.yml
+          git commit -m "Update image tag to ${{ github.sha }}"
+          git push
