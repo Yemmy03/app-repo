@@ -18,7 +18,7 @@ jobs:
       - name: Checkout app-repo
         uses: actions/checkout@v4
 
-      # Step 2 — Set AWS credentials for CLI
+      # Step 2 — Set AWS credentials
       - name: Set AWS credentials
         run: |
           echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> $GITHUB_ENV
@@ -30,7 +30,7 @@ jobs:
         run: |
           echo "ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)" >> $GITHUB_ENV
 
-      # Step 4 — Ensure ECR repository exists
+      # Step 4 — Check if ECR repository exists
       - name: Ensure ECR repository exists
         run: |
           aws ecr describe-repositories --repository-names ${{ env.IMAGE_NAME }} || \
