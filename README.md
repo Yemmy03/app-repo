@@ -1,6 +1,6 @@
 # CI/CD Pipeline: Build and Deploy to Kubernetes via Amazon ECR
 
-This repository contains a complete CI/CD workflow that automatically builds a Docker image, pushes it to Amazon ECR, and updates a Kubernetes deployment whenever code is pushed to the main branch. Below is my explanation of what each part of the workflow does.
+This repository contains a complete CI/CD workflow that automatically builds a Docker image, pushes it to Amazon ECR, and updates a Kubernetes deployment whenever code is pushed to the main branch. Below is my explanation of what each part of the workflow does..
 
 ---
 
