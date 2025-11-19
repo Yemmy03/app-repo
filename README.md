@@ -93,12 +93,3 @@ This pushes the updated deployment.yml back into the infra repository.
     git push
 ```
 ---
-
-## Summary
-
-This CI/CD pipeline automates the entire flow:
-
-- Build the Docker image  
-- Authenticate with AWS  
-- Push the image to Amazon ECR  
-- Update Kubernetes with the new version  
